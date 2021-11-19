@@ -1,7 +1,7 @@
 const puppeteer = require('puppeteer');
 
 function getHtml(){
-    const url = "https://hackerone.com/directory/programs?order_direction=DESC&order_field=started_accepting_at"
+    const url = "https://hackerone.com/directory/programs"
     try {
         (async () => {
             const browser = await puppeteer.launch();

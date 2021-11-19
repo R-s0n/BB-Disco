@@ -8,6 +8,8 @@ def get_most_recent_program_obj(args):
     content = get_content.stdout
     soup = BeautifulSoup(content, 'html.parser')
     links = soup.findAll('a', class_="daisy-link--major")
+    print(links[1])
+    print(links[2])
     return links[0]
 
 def send_slack_notification(args, program, program_link):
@@ -16,7 +18,8 @@ def send_slack_notification(args, program, program_link):
     message_json = {'text':f':fire::fire:  There is a new program on HackerOne!  Title: *{program}*  |  Link: {program_link}  :fire::fire:','username':'HackerOne','icon_emoji':':bug:'}
     f = open(f'{home_dir}/.keys/slack_web_hook')
     token = f.read()
-    requests.post(f'https://hooks.slack.com/services/{token}', json=message_json)
+    print("sending notification")
+    requests.post(f'{token}', json=message_json)
 
 def arg_parse():
     parser = argparse.ArgumentParser()
@@ -27,6 +30,7 @@ def arg_parse():
 def main(args):
     mrpo = get_most_recent_program_obj(args)
     mrp = mrpo.text
+    print(f"[-] Initial Program -- {mrp}")
     mrp_link = f"https://hackerone.com{mrpo['href']}"
     # send_slack_notification(args, mrp, mrp_link)
     while True:
@@ -35,7 +39,7 @@ def main(args):
         else:
             now = datetime.now()
             formatted_now = now.strftime("%m/%d/%Y, %H:%M:%S")
-            print(f"[-] Same -- {formatted_now}")
+            print(f"[-] Same -- {mrp} -- {formatted_now}")
         sleep(600)
 
 if __name__ == "__main__":
