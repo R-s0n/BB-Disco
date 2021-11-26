@@ -3,34 +3,72 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 from time import sleep
 
-def get_most_recent_program_obj(args):
+class HackerOne:
+    def __init__(self, mrp=None):
+        self.url = "https://hackerone.com/directory/programs"
+        self.class_ = "daisy-link--major"
+        self.platform = "HackerOne"
+        self.mrp = mrp
+        self.link = f"https://hackerone.com/{mrp}"
+
+class MostRecentPrograms:
+    def __init__(self, hackerone, bugcrowd, intigriti):
+        self.hackerone = hackerone
+        self.bugcrowd = bugcrowd
+        self.intigriti = intigriti
+
+def get_most_recent_program_obj(program):
     try:
-        get_content = subprocess.run(['node bbdisco.js'], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, shell=True)
+        get_content = subprocess.run([f'node bbdisco.js {program.url}'], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, shell=True)
         content = get_content.stdout
         soup = BeautifulSoup(content, 'html.parser')
-        links = soup.findAll('a', class_="daisy-link--major")
+        links = soup.findAll('a', program.class_)
         return links[0]
     except Exception as e:
         print("[!] Something went wrong!  Skipping this round...")
         return False
 
-def send_init_notification(args):
+def send_init_notification():
     get_home_dir = subprocess.run(["echo $HOME"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, shell=True)
     home_dir = get_home_dir.stdout.replace("\n", "")
-    message_json = {'text':f':bulb::bulb:  HackerOne Monitoring Server Online!  :bulb::bulb:','username':'HackerOne','icon_emoji':':bug:'}
+    message_json = {'text':':bulb::bulb:  Bug Bounty Program Monitoring Server Online!  :bulb::bulb:','username':'BB-Disco','icon_emoji':':bug:'}
     f = open(f'{home_dir}/.keys/slack_web_hook')
     token = f.read()
-    print("sending notification")
     requests.post(f'{token}', json=message_json)
 
-def send_slack_notification(args, program, program_link):
+def send_slack_notification(program):
     get_home_dir = subprocess.run(["echo $HOME"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, shell=True)
     home_dir = get_home_dir.stdout.replace("\n", "")
-    message_json = {'text':f':fire::fire:  There is a new program on HackerOne!  Title: *{program}*  |  Link: {program_link}  :fire::fire:','username':'HackerOne','icon_emoji':':bug:'}
+    message_json = {'text':f':fire::fire:  There is a new program on {program.platform}!  Title: *{program.mrp}*  |  Link: {program.link}  :fire::fire:','username':'HackerOne','icon_emoji':':bug:'}
+    print(message_json)
     f = open(f'{home_dir}/.keys/slack_web_hook')
     token = f.read()
-    print(f"[+] New Program Found!  Name: {program}")
-    requests.post(f'{token}', json=message_json)
+    print(f"[+] New Program Found!  Name: {program.mrp}")
+    # requests.post(f'{token}', json=message_json)
+
+def hackerone_check(mrps):
+    program = HackerOne(mrps.hackerone)
+    mrpo = get_most_recent_program_obj(program)
+    mrp = mrpo.text
+    if mrp != mrps.hackerone:
+        print(f"[!] New HackerOne Program Found!  {mrp}")
+        new_program = HackerOne(mrp)
+        send_slack_notification(new_program)
+        mrps.hackerone = mrp
+        return mrps
+    else:
+        now = datetime.now()
+        formatted_now = now.strftime("%m/%d/%Y, %H:%M:%S")
+        print(f"[-] Same -- {mrp} -- {formatted_now}")
+        return mrps
+
+def get_init_programs():
+    hackerone = HackerOne()
+    mrpo = get_most_recent_program_obj(hackerone)
+    mrp = mrpo.text
+    print(f"[-] HackerOne -- Initial Program -- {mrp}")
+    send_init_notification()
+    return MostRecentPrograms(mrp, "", "")
 
 def arg_parse():
     parser = argparse.ArgumentParser()
@@ -39,24 +77,10 @@ def arg_parse():
     return parser.parse_args()
 
 def main(args):
-    mrpo = get_most_recent_program_obj(args)
-    mrp = mrpo.text
-    print(f"[-] Initial Program -- {mrp}")
-    send_init_notification(args)
-    mrp_link = f"https://hackerone.com{mrpo['href']}"
-    # send_slack_notification(args, mrp, mrp_link)
+    mrps = get_init_programs()
     while True:
-        mrpo = get_most_recent_program_obj(args)
-        if mrpo is False:
-            continue
-        if mrp != mrpo.text:
-            mrp = mrpo.text
-            send_slack_notification(args, mrp, mrp_link)
-        else:
-            now = datetime.now()
-            formatted_now = now.strftime("%m/%d/%Y, %H:%M:%S")
-            print(f"[-] Same -- {mrp} -- {formatted_now}")
-        sleep(600)
+        mrps = hackerone_check(mrps)
+        sleep(10)
 
 if __name__ == "__main__":
     args = arg_parse()

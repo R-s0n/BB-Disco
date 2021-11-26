@@ -1,7 +1,6 @@
 const puppeteer = require('puppeteer');
 
-function getHtml(){
-    const url = "https://hackerone.com/directory/programs"
+function getHtml(url){
     try {
         (async () => {
             const browser = await puppeteer.launch();
@@ -35,4 +34,4 @@ function getHtml(){
     }
 }
 
-getHtml();
+getHtml(process.argv[2]);
