@@ -42,7 +42,7 @@ def send_init_notification():
     message_json = {'text':':bulb::bulb:  Bug Bounty Program Monitoring Server Online!  :bulb::bulb:','username':'BB-Disco','icon_emoji':':bug:'}
     f = open(f'{home_dir}/.keys/slack_web_hook')
     token = f.read()
-    # requests.post(f'https://hooks.slack.com/services/{token}', json=message_json)
+    requests.post(f'https://hooks.slack.com/services/{token}', json=message_json)
 
 def send_slack_notification(program):
     get_home_dir = subprocess.run(["echo $HOME"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, shell=True)
@@ -52,11 +52,13 @@ def send_slack_notification(program):
     f = open(f'{home_dir}/.keys/slack_web_hook')
     token = f.read()
     print(f"[+] New Program Found!  Name: {program.mrp}")
-    # requests.post(f'https://hooks.slack.com/services/{token}', json=message_json)
+    requests.post(f'https://hooks.slack.com/services/{token}', json=message_json)
 
 def hackerone_check(mrps):
     program = HackerOne(mrps.hackerone)
     mrpo = get_most_recent_program_obj(program)
+    if mrpo is False:
+        return mrps
     mrp = mrpo.text
     if mrp != mrps.hackerone:
         print(f"[!] New HackerOne Program Found!  {mrp}")
@@ -73,6 +75,8 @@ def hackerone_check(mrps):
 def bugcrowd_check(mrps):
     program = BugCrowd(mrps.bugcrowd)
     mrpo = get_most_recent_program_obj(program)
+    if mrpo is False:
+        return mrps
     mrp = mrpo.text
     if mrp != mrps.bugcrowd:
         print(f"[!] New BugCrowd Program Found!  {mrp}")
@@ -109,7 +113,7 @@ def main(args):
     while True:
         mrps = hackerone_check(mrps)
         mrps = bugcrowd_check(mrps)
-        sleep(10)
+        sleep(600)
 
 if __name__ == "__main__":
     args = arg_parse()
